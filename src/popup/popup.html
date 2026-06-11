@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <h1 class="header__title">AI CURATOR</h1>
+      <div class="strip"></div>
+    </header>
+
+    <main id="main-content">
+      <div id="save-view" class="view">
+        <div class="card" id="page-preview">
+          <div class="card__placeholder" id="page-loading">
+            <p>Loading page data...</p>
+          </div>
+          <div id="page-data" style="display:none">
+            <h2 class="card__title" id="page-title">Page Title</h2>
+            <p class="card__body" id="page-description">Description</p>
+            <div class="card__meta">
+              <span class="tag" id="page-domain">domain.com</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="ai-card" style="display:none">
+          <h2 class="card__title">AI ANALYSIS</h2>
+          <div class="card__tags" id="ai-tags"></div>
+          <p class="card__body" id="ai-summary"></p>
+        </div>
+
+        <button class="btn btn--primary" id="save-btn">
+          SAVE PAGE
+        </button>
+        <div id="save-status" class="status-badge" style="display:none"></div>
+      </div>
+
+      <div id="list-view" class="view" style="display:none">
+        <div class="search-bar">
+          <input type="text" class="input" id="search-input" placeholder="Search saved pages..." />
+        </div>
+        <div id="bookmark-list"></div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <nav class="nav-bar">
+        <button class="nav-btn" id="nav-save" title="Save page">+</button>
+        <button class="nav-btn" id="nav-list" title="My library">≡</button>
+        <button class="nav-btn" id="nav-settings" title="Settings">⚙</button>
+      </nav>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
