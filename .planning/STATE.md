@@ -1,25 +1,57 @@
 # AI Content Curator — Project State
 
-## Current Phase: Planning Complete
-Next action: `/gsd:plan-phase 1` to begin Phase 1 planning
+## Status: BUILD COMPLETE ✅
 
-## Decisions Made
-- Type: Chrome Extension (Manifest V3)
-- AI Provider: Google Gemini (gemini-2.0-flash)
-- Storage: IndexedDB via Dexie.js + chrome.storage.local for secrets
-- UI: Neo-brutalism (custom CSS, no framework)
-- Build: Vanilla JS (no bundler initially)
-- Mode: YOLO (auto-approve)
-- Depth: Comprehensive (6 phases, ~7 tasks each)
-- Parallel execution: Enabled
+All 6 phases implemented and committed:
 
-## Completed
-- [x] Git repo initialized
-- [x] PROJECT.md created
-- [x] config.json created
-- [x] Research completed (4 researchers)
-- [x] REQUIREMENTS.md defined (36 requirements)
-- [x] ROADMAP.md created (6 phases, 41 tasks)
+| Phase | Status | Commits |
+|-------|--------|---------|
+| 1. Foundation & Scaffolding | ✅ Done | feat(01): foundation and scaffolding |
+| 2. Content Extraction & Save Flow | ✅ Done | feat(02-03): content extraction, save flow, and Gemini AI |
+| 3. Gemini AI Integration | ✅ Done | feat(02-03): content extraction, save flow, and Gemini AI |
+| 4. Browse, Search & Organization | ✅ Done | feat(04): browse, search and organization |
+| 5. Reader Mode, Export & Offline | ✅ Done | feat(05): reader mode, export and offline |
+| 6. Polish, Testing & Store Prep | ✅ Done | feat(06): polish, error handling, and store prep |
 
-## Blockers
-- None
+## Extension Files (29 files)
+```
+src/
+├── manifest.json                          # MV3 configuration
+├── background/                            # Service worker layer
+│   ├── service-worker.js                  # Entry point, event listeners
+│   ├── message-router.js                  # Central message dispatch
+│   ├── gemini-client.js                   # Gemini API wrapper
+│   ├── sync-engine.js                     # Offline queue processing
+│   ├── alarm-manager.js                   # Scheduled tasks
+│   └── error-handler.js                   # Error classification
+├── popup/                                 # UI layer
+│   ├── popup.html / popup.js / popup.css  # Main popup (save + library)
+│   ├── options.html / options.js          # Settings page (API key)
+│   └── reader.html / reader.js            # Reader mode
+├── content/
+│   ├── content.js                         # Page data extraction
+│   └── readability.js                     # Readability utilities
+├── core/
+│   ├── db/schema.js                       # Dexie schema
+│   ├── db/bookmark-repo.js                # Bookmark CRUD
+│   ├── db/tag-repo.js                     # Tag operations
+│   ├── db/sync-queue-repo.js              # Offline queue
+│   ├── messaging/protocol.js              # Action constants
+│   ├── messaging/sender.js                # Message helpers
+│   └── utils/ (retry, url-utils, network) # Utilities
+├── lib/dexie-bundle.js                    # Bundled Dexie.js
+└── assets/icon*.png                       # Extension icons
+```
+
+## To Load in Chrome
+1. Open chrome://extensions
+2. Enable Developer Mode
+3. Click "Load unpacked"
+4. Select the `src/` folder
+5. Extension appears as "AI Content Curator"
+
+## Setup After Loading
+1. Click extension icon → Settings (⚙)
+2. Get a Gemini API key from aistudio.google.com
+3. Paste key and click "Test Key"
+4. Start saving pages!

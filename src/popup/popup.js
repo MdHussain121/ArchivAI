@@ -12,6 +12,7 @@ function connectToSW() {
   port.onMessage.addListener((msg) => {
     if (msg.action === ACTIONS.AI_TAGS_READY) {
       showSaveTags(msg.tags, msg.summary);
+      loadBookmarks();
     }
   });
   port.onDisconnect.addListener(() => {
@@ -27,9 +28,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   currentTab = tab;
 
+  await checkApiKey();
+
   document.getElementById('nav-save').addEventListener('click', () => switchView('save'));
   document.getElementById('nav-list').addEventListener('click', () => switchView('list'));
   document.getElementById('nav-settings').addEventListener('click', openSettings);
+  document.getElementById('settings-link').addEventListener('click', (e) => { e.preventDefault(); openSettings(); });
   document.getElementById('nav-export').addEventListener('click', handleExport);
   document.getElementById('save-btn').addEventListener('click', handleSave);
   document.getElementById('search-input').addEventListener('input', handleSearch);
@@ -46,6 +50,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadBookmarks();
   loadCategories();
 });
+
+async function checkApiKey() {
+  const result = await chrome.storage.local.get('geminiApiKey');
+  const banner = document.getElementById('no-key-banner');
+  if (!result.geminiApiKey) {
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
 
 async function loadCategories() {
   const response = await sendMessageToSW({ action: ACTIONS.GET_CATEGORIES });
@@ -75,6 +89,7 @@ async function loadPageData() {
   loading.style.display = 'block';
   data.style.display = 'none';
   document.getElementById('ai-card').style.display = 'none';
+  document.getElementById('ai-pending').style.display = 'none';
 
   try {
     const response = await sendMessageToSW({
@@ -87,7 +102,7 @@ async function loadPageData() {
       document.getElementById('page-title').textContent = response.data.title || 'Untitled';
       document.getElementById('page-description').textContent = response.data.description || '';
       document.getElementById('page-domain').textContent = response.data.domain || '';
-      document.getElementById('page-domain').className = 'tag tag--cat';
+      document.getElementById('page-domain').className = 'tag';
 
       loading.style.display = 'none';
       data.style.display = 'block';
@@ -98,12 +113,13 @@ async function loadPageData() {
 }
 
 function showSaveTags(tags, summary) {
+  document.getElementById('ai-pending').style.display = 'none';
   const card = document.getElementById('ai-card');
   const tagsContainer = document.getElementById('ai-tags');
   const summaryEl = document.getElementById('ai-summary');
 
   if (tags?.length) {
-    tagsContainer.innerHTML = tags.map(t => `<span class="tag tag--ai">${t}</span>`).join('');
+    tagsContainer.innerHTML = tags.map(t => `<span class="tag tag--ai">${escapeHtml(t)}</span>`).join('');
   }
   if (summary) {
     summaryEl.textContent = summary;
@@ -125,8 +141,8 @@ async function handleSave() {
     });
 
     if (response.ok) {
-      showStatus('SAVED!', 'success');
-      setTimeout(() => switchView('list'), 1000);
+      showStatus('SAVED! Analyzing with Gemini AI...', 'success');
+      document.getElementById('ai-pending').style.display = 'flex';
     } else {
       showStatus('FAILED: ' + response.error, 'error');
     }
@@ -200,19 +216,22 @@ function renderBookmarkList(bookmarks) {
   bookmarks.forEach(b => {
     const item = document.createElement('div');
     item.className = 'bookmark-item';
+
+    const statusBadge = !b.aiProcessed
+      ? '<span class="tag" style="background:#ffaa00;color:#000;font-size:10px">AI PENDING</span>'
+      : `<span class="tag tag--cat" style="font-size:10px">${escapeHtml(b.suggestedCategory || 'uncategorized')}</span>`;
+
     item.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div style="flex:1">
+        <div style="flex:1;min-width:0">
           <div class="bookmark-item__title">${escapeHtml(b.title || 'Untitled')}</div>
           <div class="bookmark-item__url">${escapeHtml(b.domain || '')}</div>
         </div>
-        <span class="tag ${b.readStatus === 'unread' ? 'tag--cat' : 'tag--ai'}" style="font-size:10px">
-          ${b.readStatus || 'unread'}
-        </span>
+        ${statusBadge}
       </div>
       <div class="bookmark-item__tags" style="margin-top:6px">
-        ${b.suggestedCategory ? `<span class="tag tag--cat">${escapeHtml(b.suggestedCategory)}</span>` : ''}
         ${(b.aiTags || []).slice(0, 3).map(t => `<span class="tag tag--ai">${escapeHtml(t)}</span>`).join('')}
+        ${!b.aiProcessed && b.aiTags?.length === 0 ? '<span style="font-size:11px;color:#999">Waiting for AI analysis...</span>' : ''}
       </div>
     `;
     item.addEventListener('click', () => openReader(b));
@@ -231,7 +250,6 @@ function showStatus(message, type) {
   status.textContent = message;
   status.className = 'status-badge status-badge--' + type;
   status.style.display = 'block';
-  setTimeout(() => { status.style.display = 'none'; }, 3000);
 }
 
 async function handleExport() {

@@ -217,6 +217,12 @@ export class MessageRouter {
   }
 
   async processAITags(bookmarkId, textContent, title) {
+    const { geminiApiKey } = await chrome.storage.local.get('geminiApiKey');
+    if (!geminiApiKey) {
+      console.log('AI skipped: no Gemini API key configured');
+      return;
+    }
+
     try {
       const gemini = new GeminiClient();
       const result = await gemini.analyze(textContent, title);

@@ -42,6 +42,12 @@ export class SyncEngine {
   async processItem(item) {
     switch (item.action) {
       case 'process_ai': {
+        const { geminiApiKey } = await chrome.storage.local.get('geminiApiKey');
+        if (!geminiApiKey) {
+          console.log('Sync: AI skipped — no API key');
+          return;
+        }
+
         const result = await this.gemini.analyze(
           item.payload?.textContent,
           item.payload?.title
