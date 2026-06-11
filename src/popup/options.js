@@ -3,11 +3,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saveBtn = document.getElementById('save-key-btn');
   const testBtn = document.getElementById('test-key-btn');
   const status = document.getElementById('key-status');
+  const radios = document.querySelectorAll('input[name="summary-length"]');
 
-  const result = await chrome.storage.local.get('nimApiKey');
+  const result = await chrome.storage.local.get(['nimApiKey', 'summaryLength']);
   if (result.nimApiKey) {
     keyInput.value = result.nimApiKey;
   }
+
+  const savedLength = result.summaryLength || 'short';
+  radios.forEach(r => {
+    if (r.value === savedLength) r.checked = true;
+    r.addEventListener('change', () => {
+      if (r.checked) {
+        chrome.storage.local.set({ summaryLength: r.value });
+      }
+    });
+  });
 
   saveBtn.addEventListener('click', async () => {
     const key = keyInput.value.trim();

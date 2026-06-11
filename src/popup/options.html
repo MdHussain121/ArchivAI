@@ -13,6 +13,8 @@
     .btn-row .btn { width: auto; flex: 1; }
     .status { margin-top: var(--space-sm); }
     .info-card { background: var(--color-surface); border: 2px solid var(--color-border); padding: var(--space-sm); font-size: var(--font-size-sm); }
+    .radio-option { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-xs) 0; cursor: pointer; font-size: var(--font-size-base); }
+    .radio-option input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--color-accent); }
   </style>
 </head>
 <body>
@@ -41,9 +43,28 @@
         </div>
 
         <div class="card">
+          <h2 class="card__title">SUMMARY LENGTH</h2>
+          <div class="form-group">
+            <label>AI summary detail level:</label>
+            <label class="radio-option">
+              <input type="radio" name="summary-length" value="short" checked />
+              <span>Short — 1-2 sentences</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="summary-length" value="medium" />
+              <span>Medium — 1 paragraph (3-5 sentences)</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="summary-length" value="long" />
+              <span>Long — detailed multi-paragraph</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
           <h2 class="card__title">ABOUT</h2>
           <p class="card__body">
-            AI Content Curator v1.0.0<br/>
+            ArchivAI v1.0.0<br/>
             Save web pages and auto-organize with Nvidia NIM AI.
           </p>
         </div>

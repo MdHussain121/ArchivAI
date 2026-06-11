@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AI Content Curator",
+  "name": "ArchivAI",
   "version": "1.0.0",
-  "description": "Save web pages and auto-organize with Gemini AI. Automatically tags, categorizes, and summarizes content.",
+  "description": "Save web pages and auto-organize with Nvidia NIM AI. Automatically tags, categorizes, and summarizes content.",
   "permissions": [
     "storage",
     "activeTab",
@@ -19,7 +19,7 @@
   },
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "AI Content Curator",
+    "default_title": "ArchivAI",
     "default_icon": {
       "16": "assets/icon16.png",
       "48": "assets/icon48.png",
@@ -34,6 +34,15 @@
     "16": "assets/icon16.png",
     "48": "assets/icon48.png",
     "128": "assets/icon128.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Open ArchivAI"
+    }
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

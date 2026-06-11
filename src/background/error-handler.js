@@ -3,7 +3,7 @@ export class ErrorHandler {
     const msg = error?.message || '';
 
     if (msg.includes('API key not configured')) {
-      return { userMessage: 'Configure your Gemini API key in Settings', type: 'warning' };
+      return { userMessage: 'Configure your Nvidia NIM API key in Settings', type: 'warning' };
     }
     if (msg.includes('429')) {
       return { userMessage: 'Rate limited. Waiting before retry...', type: 'warning' };

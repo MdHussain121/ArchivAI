@@ -6,28 +6,51 @@ let currentPageData = null;
 let port = null;
 let currentView = 'save';
 let bookmarksCache = [];
+let hasPageData = false;
+let aiPendingTimer = null;
+let listRefreshTimer = null;
 
 function connectToSW() {
   port = chrome.runtime.connect({ name: 'popup-session' });
   port.onMessage.addListener((msg) => {
     if (msg.action === ACTIONS.AI_TAGS_READY) {
+      clearTimeout(aiPendingTimer);
       showSaveTags(msg.tags, msg.summary, msg.skipped, msg.error);
+      loadBookmarks();
+    }
+    if (msg.action === ACTIONS.API_KEY_STATUS && msg.hasKey) {
+      document.getElementById('no-key-banner').style.display = 'none';
+      checkApiKey();
+    }
+    if (msg.action === ACTIONS.BOOKMARK_UPDATED) {
       loadBookmarks();
     }
   });
 
-  // Timeout — if AI doesn't respond in 12s, hide spinner
-  setTimeout(() => {
+  aiPendingTimer = setTimeout(() => {
     const pending = document.getElementById('ai-pending');
     if (pending && pending.style.display !== 'none') {
-      pending.style.display = 'none';
+      pending.innerHTML = '<div class="loading-spinner"></div><span>Still analyzing...</span>';
     }
-  }, 12000);
+  }, 30000);
+
   port.onDisconnect.addListener(() => {
     if (!chrome.runtime.lastError) {
       setTimeout(connectToSW, 100);
     }
   });
+}
+
+function startListRefresh() {
+  stopListRefresh();
+  listRefreshTimer = setInterval(loadBookmarks, 5000);
+}
+
+function stopListRefresh() {
+  if (listRefreshTimer) {
+    clearInterval(listRefreshTimer);
+    listRefreshTimer = null;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -42,12 +65,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('nav-list').addEventListener('click', () => switchView('list'));
   document.getElementById('nav-settings').addEventListener('click', openSettings);
   document.getElementById('settings-link').addEventListener('click', (e) => { e.preventDefault(); openSettings(); });
-  document.getElementById('nav-export').addEventListener('click', handleExport);
+  document.getElementById('nav-export').addEventListener('click', showExportDialog);
   document.getElementById('save-btn').addEventListener('click', handleSave);
   document.getElementById('search-input').addEventListener('input', handleSearch);
   document.getElementById('filter-category').addEventListener('change', applyFilters);
   document.getElementById('filter-status').addEventListener('change', applyFilters);
   document.getElementById('sort-by').addEventListener('change', applyFilters);
+
+  document.getElementById('export-json').addEventListener('click', () => handleExport('json'));
+  document.getElementById('export-csv').addEventListener('click', () => handleExport('csv'));
+  document.getElementById('export-txt').addEventListener('click', () => handleExport('txt'));
+  document.getElementById('export-cancel').addEventListener('click', () => {
+    document.getElementById('export-confirm').style.display = 'none';
+  });
 
   window.addEventListener('online', () => { document.getElementById('offline-banner').style.display = 'none'; });
   window.addEventListener('offline', () => { document.getElementById('offline-banner').style.display = 'block'; });
@@ -62,11 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function checkApiKey() {
   const result = await chrome.storage.local.get('nimApiKey');
   const banner = document.getElementById('no-key-banner');
-  if (!result.nimApiKey) {
-    banner.style.display = 'block';
-  } else {
-    banner.style.display = 'none';
-  }
+  banner.style.display = result.nimApiKey ? 'none' : 'block';
 }
 
 async function loadCategories() {
@@ -87,17 +113,25 @@ function switchView(view) {
   currentView = view;
   document.getElementById('save-view').style.display = view === 'save' ? 'flex' : 'none';
   document.getElementById('list-view').style.display = view === 'list' ? 'flex' : 'none';
-  if (view === 'list') loadBookmarks();
+  if (view === 'list') {
+    loadBookmarks();
+    startListRefresh();
+  } else {
+    stopListRefresh();
+  }
 }
 
 async function loadPageData() {
   const loading = document.getElementById('page-loading');
   const data = document.getElementById('page-data');
+  const saveBtn = document.getElementById('save-btn');
 
   loading.style.display = 'block';
   data.style.display = 'none';
   document.getElementById('ai-card').style.display = 'none';
   document.getElementById('ai-pending').style.display = 'none';
+  hasPageData = false;
+  saveBtn.disabled = true;
 
   try {
     const response = await sendMessageToSW({
@@ -114,6 +148,10 @@ async function loadPageData() {
 
       loading.style.display = 'none';
       data.style.display = 'block';
+      hasPageData = true;
+      saveBtn.disabled = false;
+    } else {
+      loading.textContent = 'Could not extract page data';
     }
   } catch (err) {
     loading.textContent = 'Navigate to a page first';
@@ -128,7 +166,7 @@ function showSaveTags(tags, summary, skipped, error) {
 
   if (skipped) {
     card.innerHTML = `
-      <h2 class="card__title">⚠ AI UNAVAILABLE</h2>
+      <h2 class="card__title">AI UNAVAILABLE</h2>
       <p class="card__body">Add a Nvidia NIM API key in Settings to enable auto-tagging.</p>
     `;
     card.style.display = 'block';
@@ -137,7 +175,7 @@ function showSaveTags(tags, summary, skipped, error) {
 
   if (error) {
     card.innerHTML = `
-      <h2 class="card__title">⚠ AI FAILED</h2>
+      <h2 class="card__title">AI FAILED</h2>
       <p class="card__body">${escapeHtml(error)}. It will retry automatically.</p>
     `;
     card.style.display = 'block';
@@ -154,6 +192,8 @@ function showSaveTags(tags, summary, skipped, error) {
 }
 
 async function handleSave() {
+  if (!hasPageData || !currentPageData) return;
+
   const btn = document.getElementById('save-btn');
   const status = document.getElementById('save-status');
 
@@ -269,8 +309,12 @@ function renderBookmarkList(bookmarks) {
         ${(b.aiTags || []).slice(0, 3).map(t => `<span class="tag tag--ai">${escapeHtml(t)}</span>`).join('')}
         ${!b.aiProcessed && b.aiTags?.length === 0 ? '<span style="font-size:11px;color:#999">Waiting for AI analysis...</span>' : ''}
       </div>
+      ${b.aiSummary ? `<div class="bookmark-item__summary">${escapeHtml(b.aiSummary).slice(0, 120)}${b.aiSummary.length > 120 ? '...' : ''}</div>` : ''}
     `;
-    item.querySelector('.bookmark-item__title').addEventListener('click', () => openReader(b));
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.delete-btn')) return;
+      openReader(b);
+    });
     item.querySelector('.delete-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       handleDelete(b);
@@ -311,15 +355,20 @@ function showStatus(message, type) {
   status.style.display = 'block';
 }
 
-async function handleExport() {
-  const format = confirm('Export as JSON? Click Cancel for CSV') ? 'json' : 'csv';
+function showExportDialog() {
+  document.getElementById('export-confirm').style.display = 'flex';
+}
+
+async function handleExport(format) {
+  document.getElementById('export-confirm').style.display = 'none';
+
   const response = await sendMessageToSW({ action: ACTIONS.EXPORT_DATA, format });
   if (response.ok) {
     const blob = new Blob([response.data.data], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ai-curator-export.${format}`;
+    a.download = `archivai-export.${format}`;
     a.click();
     URL.revokeObjectURL(url);
     showStatus('Exported!', 'success');

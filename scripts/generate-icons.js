@@ -1,41 +1,118 @@
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const SIZES = [16, 48, 128];
-const COLORS = {
-  bg: '#ff6b35',
-  text: '#ffffff',
-  border: '#000000',
-};
+const ACCENT = [255, 107, 53];
+const WHITE = [255, 255, 255];
+const BLACK = [0, 0, 0];
+const DARK = [40, 40, 40];
 
-function createPNG(size) {
-  const canvas = Buffer.alloc(size * size * 4);
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = size / 2 - 1;
+function setPixel(buf, size, x, y, r, g, b, a = 255) {
+  if (x < 0 || x >= size || y < 0 || y >= size) return;
+  const idx = (y * size + x) * 4;
+  buf[idx] = r;
+  buf[idx + 1] = g;
+  buf[idx + 2] = b;
+  buf[idx + 3] = a;
+}
 
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const dx = x - cx;
-      const dy = y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const idx = (y * size + x) * 4;
+function fillRect(buf, size, x1, y1, x2, y2, r, g, b, a = 255) {
+  for (let y = y1; y <= y2; y++) {
+    for (let x = x1; x <= x2; x++) {
+      setPixel(buf, size, x, y, r, g, b, a);
+    }
+  }
+}
 
-      if (dist <= r) {
-        canvas[idx] = 0xff;     // R
-        canvas[idx + 1] = 0x6b; // G
-        canvas[idx + 2] = 0x35; // B
-        canvas[idx + 3] = 0xff; // A
-      } else {
-        canvas[idx] = 0;
-        canvas[idx + 1] = 0;
-        canvas[idx + 2] = 0;
-        canvas[idx + 3] = 0;
-      }
+function drawHLine(buf, size, x1, x2, y, r, g, b) {
+  for (let x = x1; x <= x2; x++) setPixel(buf, size, x, y, r, g, b);
+}
+
+function drawVLine(buf, size, x, y1, y2, r, g, b) {
+  for (let y = y1; y <= y2; y++) setPixel(buf, size, x, y, r, g, b);
+}
+
+function drawLetterA(buf, size, cx, cy, scale, r, g, b) {
+  const w = Math.max(3, Math.round(scale * 0.5));
+  const h = Math.max(4, Math.round(scale * 0.7));
+  const left = cx - Math.round(w / 2);
+  const barY = cy + Math.round(h * 0.15);
+
+  for (let row = 0; row < h; row++) {
+    const half = Math.round((row / h) * w * 0.5);
+    for (let col = half; col < w - half; col++) {
+      setPixel(buf, size, left + col, cy - Math.round(h / 2) + row, r, g, b);
+    }
+  }
+  drawHLine(buf, size, left + 1, left + w - 2, barY, r, g, b);
+}
+
+function createIcon(size) {
+  const buf = Buffer.alloc(size * size * 4);
+  const pad = Math.max(1, Math.round(size * 0.08));
+  const bw = Math.max(1, Math.round(size * 0.04));
+
+  // folder body
+  const fTop = Math.round(size * 0.28);
+  const fBot = size - pad - 1;
+  const fL = pad;
+  const fR = size - pad - 1;
+
+  // folder tab
+  const tabW = Math.round(size * 0.4);
+  const tabH = Math.round(size * 0.12);
+  const tabL = Math.round(size * 0.15);
+  const tabR = tabL + tabW;
+
+  // fill folder background
+  fillRect(buf, size, fL, fTop + tabH, fR, fBot, ACCENT[0], ACCENT[1], ACCENT[2]);
+
+  // tab
+  fillRect(buf, size, tabL, fTop, tabR, fTop + tabH, ACCENT[0], ACCENT[1], ACCENT[2]);
+
+  // folder lines (subtle document lines)
+  const lineY1 = Math.round(size * 0.5);
+  const lineY2 = Math.round(size * 0.58);
+  const lineY3 = Math.round(size * 0.66);
+  const lineY4 = Math.round(size * 0.74);
+  const linePad = Math.round(size * 0.12);
+  for (const ly of [lineY1, lineY2, lineY3, lineY4]) {
+    drawHLine(buf, size, fL + linePad, fR - linePad, ly, 220, 80, 40);
+  }
+
+  // letter A
+  const aScale = Math.round(size * 0.5);
+  drawLetterA(buf, size, Math.round(size / 2), Math.round(size * 0.58), aScale, WHITE[0], WHITE[1], WHITE[2]);
+
+  // black border (folder)
+  for (let x = fL; x <= fR; x++) {
+    for (let b = 0; b < bw; b++) {
+      setPixel(buf, size, x, fTop + tabH - 1 + b, BLACK[0], BLACK[1], BLACK[2]);
+      setPixel(buf, size, x, fBot - b, BLACK[0], BLACK[1], BLACK[2]);
+    }
+  }
+  for (let y = fTop + tabH; y <= fBot; y++) {
+    for (let b = 0; b < bw; b++) {
+      setPixel(buf, size, fL + b, y, BLACK[0], BLACK[1], BLACK[2]);
+      setPixel(buf, size, fR - b, y, BLACK[0], BLACK[1], BLACK[2]);
     }
   }
 
-  return canvas;
+  // tab border
+  for (let x = tabL; x <= tabR; x++) {
+    for (let b = 0; b < bw; b++) {
+      setPixel(buf, size, x, fTop - 1 + b, BLACK[0], BLACK[1], BLACK[2]);
+    }
+  }
+  for (let y = fTop; y <= fTop + tabH; y++) {
+    for (let b = 0; b < bw; b++) {
+      setPixel(buf, size, tabL - 1 + b, y, BLACK[0], BLACK[1], BLACK[2]);
+      setPixel(buf, size, tabR + 1 - b, y, BLACK[0], BLACK[1], BLACK[2]);
+    }
+  }
+
+  return buf;
 }
 
 function makePNGBuffer(pixelData, width, height) {
@@ -54,13 +131,12 @@ function makePNGBuffer(pixelData, width, height) {
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;  // bit depth
-  ihdr[9] = 6;  // color type (RGBA)
-  ihdr[10] = 0; // compression
-  ihdr[11] = 0; // filter
-  ihdr[12] = 0; // interlace
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
 
-  const zlib = require('zlib');
   const deflated = zlib.deflateSync(buf);
 
   function crc32(data) {
@@ -101,7 +177,7 @@ function makePNGBuffer(pixelData, width, height) {
 const assetsDir = path.join(__dirname, '..', 'src', 'assets');
 
 SIZES.forEach(size => {
-  const pixelData = createPNG(size);
+  const pixelData = createIcon(size);
   const pngBuffer = makePNGBuffer(pixelData, size, size);
   const filePath = path.join(assetsDir, `icon${size}.png`);
   fs.writeFileSync(filePath, pngBuffer);

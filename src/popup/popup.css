@@ -295,6 +295,15 @@ body {
   flex-wrap: wrap;
 }
 
+.bookmark-item__summary {
+  font-size: var(--font-size-sm);
+  color: #555;
+  margin-top: 6px;
+  line-height: 1.4;
+  border-top: 1px solid #ddd;
+  padding-top: 6px;
+}
+
 .delete-btn {
   background: none;
   border: 2px solid var(--color-border);
@@ -390,7 +399,7 @@ body {
   margin-bottom: var(--space-sm);
 }
 
-.delete-overlay {
+.overlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.6);
@@ -400,7 +409,7 @@ body {
   z-index: 100;
 }
 
-.delete-dialog {
+.dialog {
   background: #fff;
   border: var(--border-thicker);
   box-shadow: var(--shadow-brutal-lg);
@@ -409,25 +418,25 @@ body {
   text-align: center;
 }
 
-.delete-dialog__title {
+.dialog__title {
   font-size: var(--font-size-lg);
   font-weight: 900;
   text-transform: uppercase;
   margin-bottom: var(--space-sm);
 }
 
-.delete-dialog__msg {
+.dialog__msg {
   font-size: var(--font-size-base);
   margin-bottom: var(--space-lg);
   word-break: break-word;
 }
 
-.delete-dialog__actions {
+.dialog__actions {
   display: flex;
   gap: var(--space-sm);
 }
 
-.delete-dialog__actions .btn {
+.dialog__actions .btn {
   flex: 1;
   width: auto;
 }

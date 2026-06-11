@@ -8,7 +8,7 @@
 <body>
   <div id="app">
     <header class="header">
-      <h1 class="header__title">AI CURATOR</h1>
+      <h1 class="header__title">ARCHIVAI</h1>
       <div class="strip"></div>
     </header>
 
@@ -19,13 +19,26 @@
       ⚙ No Nvidia NIM API key — <a href="#" id="settings-link" style="color:inherit;font-weight:900">Configure in Settings</a>
     </div>
 
-    <div id="delete-confirm" class="delete-overlay" style="display:none">
-      <div class="delete-dialog">
-        <div class="delete-dialog__title">DELETE?</div>
-        <div class="delete-dialog__msg" id="delete-msg"></div>
-        <div class="delete-dialog__actions">
+    <div id="delete-confirm" class="overlay" style="display:none">
+      <div class="dialog">
+        <div class="dialog__title">DELETE?</div>
+        <div class="dialog__msg" id="delete-msg"></div>
+        <div class="dialog__actions">
           <button class="btn btn--small btn--primary" id="delete-yes">DELETE</button>
           <button class="btn btn--small btn--secondary" id="delete-no">CANCEL</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="export-confirm" class="overlay" style="display:none">
+      <div class="dialog">
+        <div class="dialog__title">EXPORT FORMAT</div>
+        <div class="dialog__msg">Choose export format:</div>
+        <div class="dialog__actions">
+          <button class="btn btn--small btn--primary" id="export-json">JSON</button>
+          <button class="btn btn--small btn--primary" id="export-csv">CSV</button>
+          <button class="btn btn--small btn--primary" id="export-txt">TXT</button>
+          <button class="btn btn--small btn--secondary" id="export-cancel">CANCEL</button>
         </div>
       </div>
     </div>
@@ -50,7 +63,7 @@
         </div>
 
         <div class="card" id="ai-card" style="display:none">
-          <h2 class="card__title">🧠 AI ANALYSIS</h2>
+          <h2 class="card__title">AI ANALYSIS</h2>
           <div class="card__tags" id="ai-tags"></div>
           <p class="card__body" id="ai-summary"></p>
         </div>

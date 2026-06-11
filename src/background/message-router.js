@@ -40,6 +40,10 @@ export class MessageRouter {
     port.onDisconnect.addListener(() => this.ports.delete(port));
   }
 
+  handleApiKeyUpdated() {
+    this.broadcastToPopups({ action: ACTIONS.API_KEY_STATUS, hasKey: true });
+  }
+
   async handleGetPageMeta(msg) {
     if (!msg.tabId) {
       throw new Error('No tab ID provided');
@@ -55,7 +59,7 @@ export class MessageRouter {
     }
 
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Page extraction timed out')), 3000);
+      const timeout = setTimeout(() => reject(new Error('Page extraction timed out')), 10000);
 
       chrome.tabs.sendMessage(msg.tabId, { action: ACTIONS.EXTRACT_PAGE }, (response) => {
         clearTimeout(timeout);
@@ -107,7 +111,7 @@ export class MessageRouter {
     bookmark.savedAt = Date.now();
     const id = await db.bookmarks.add(bookmark);
 
-    this.processAITags(id, bookmark.textContent, bookmark.title).catch(() => {});
+    this.processAITags(id, bookmark.textContent, bookmark.title);
 
     this.broadcastToPopups({ action: ACTIONS.BOOKMARK_UPDATED });
     return { id, isUpdate: false };
@@ -121,14 +125,18 @@ export class MessageRouter {
   }
 
   async handleGetBookmark(msg) {
-    return db.bookmarks.get(msg.id);
+    const bookmark = await db.bookmarks.get(msg.id);
+    if (bookmark && bookmark.textContent && bookmark.textContent.length > 50000) {
+      bookmark.textContent = bookmark.textContent.slice(0, 50000) + '\n[Content truncated...]';
+    }
+    return bookmark;
   }
 
   async handleGetBookmarks() {
     return db.bookmarks
       .orderBy('savedAt')
       .reverse()
-      .limit(50)
+      .limit(200)
       .toArray();
   }
 
@@ -136,7 +144,7 @@ export class MessageRouter {
     const q = (msg.query || '').toLowerCase();
     if (!q) return [];
 
-    const all = await db.bookmarks.orderBy('savedAt').reverse().toArray();
+    const all = await db.bookmarks.orderBy('savedAt').reverse().limit(200).toArray();
     return all.filter(b =>
       b.title?.toLowerCase().includes(q) ||
       b.url?.toLowerCase().includes(q) ||
@@ -155,7 +163,7 @@ export class MessageRouter {
   }
 
   async handleGetSettings() {
-    const result = await chrome.storage.local.get(['geminiApiKey', 'theme', 'sortOrder']);
+    const result = await chrome.storage.local.get(['nimApiKey', 'theme', 'sortOrder']);
     return result;
   }
 
@@ -196,13 +204,19 @@ export class MessageRouter {
           b.readStatus,
           b.wordCount || 0,
         ]);
-        return { format, data: '\uFEFF' + headers.join(',') + '\n' + rows.map(r => r.join(',')).join('\n') };
+        return { format, data: '\uFEFF' + headers.join(',') + '\r\n' + rows.map(r => r.join(',')).join('\r\n') };
       }
       case 'html': {
         const items = exportData.map(b =>
           `<DT><A HREF="${b.url}" ADD_DATE="${Math.floor(new Date(b.savedAt).getTime() / 1000)}" TAGS="${(b.tags || []).join(',')}">${b.title}</A>`
         ).join('\n');
-        return { format, data: `<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Bookmarks</TITLE>\n<H1>AI Content Curator Export</H1>\n<DL><p>\n${items}\n</DL>` };
+        return { format, data: `<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Bookmarks</TITLE>\n<H1>ArchivAI Export</H1>\n<DL><p>\n${items}\n</DL>` };
+      }
+      case 'txt': {
+        const lines = exportData.map(b =>
+          `Title: ${b.title}\nURL: ${b.url}\nCategory: ${b.category || 'uncategorized'}\nTags: ${(b.tags || []).join(', ')}\nSummary: ${b.summary || ''}\nSaved: ${b.savedAt}\n---`
+        ).join('\n\n');
+                return { format, data: `ArchivAI Export\n${'='.repeat(50)}\n\n${lines}\n` };
       }
       default: {
         return { format, data: JSON.stringify(exportData, null, 2) };
@@ -256,6 +270,18 @@ export class MessageRouter {
       console.warn('AI processing failed:', err.message);
       await db.bookmarks.update(bookmarkId, { aiProcessed: true, syncStatus: 'failed' });
       this.broadcastToPopups({ action: ACTIONS.AI_TAGS_READY, bookmarkId, tags: [], summary: '', error: err.message });
+
+      await db.syncQueue.add({
+        bookmarkId,
+        action: 'process_ai',
+        payload: { textContent, title },
+        retryCount: 0,
+        lastError: err.message,
+        lastAttemptAt: Date.now(),
+        createdAt: Date.now(),
+      });
+
+      chrome.alarms.create('sync-pending', { delayInMinutes: 1 });
     }
   }
 

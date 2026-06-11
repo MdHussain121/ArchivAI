@@ -5,15 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="popup.css" />
   <style>
-    body { width: 100%; min-height: 100vh; padding: var(--space-lg); max-width: 800px; margin: 0 auto; }
+    body { width: 100%; min-height: 100vh; padding: var(--space-lg); max-width: 800px; margin: 0 auto; transition: background 0.2s, color 0.2s; }
     .reader-header { margin-bottom: var(--space-lg); }
     .reader-title { font-size: 28px; font-weight: 900; line-height: 1.2; margin-bottom: var(--space-sm); }
     .reader-meta { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-lg); }
-    .reader-content { font-size: var(--reader-font-size, 16px); line-height: 1.8; color: #333; }
+    .reader-content { font-size: var(--reader-font-size, 16px); line-height: 1.8; color: #333; transition: color 0.2s; }
     .reader-content p { margin-bottom: 1em; }
-    .reader-controls { display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg); align-items: center; }
+    .reader-controls { display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg); align-items: center; flex-wrap: wrap; }
     .reader-controls label { font-weight: 700; font-size: var(--font-size-sm); text-transform: uppercase; }
     .back-link { display: inline-block; margin-bottom: var(--space-md); font-weight: 700; text-decoration: underline; cursor: pointer; }
+    .back-link:hover { color: var(--color-accent); }
+
+    body.dark { background: #121212; color: #e0e0e0; }
+    body.dark .reader-content { color: #ccc; }
+    body.dark .reader-content blockquote { border-left-color: var(--color-accent) !important; }
+    body.dark .reader-meta .tag { border-color: #555; background: #222; color: #ddd; }
+    body.dark .reader-meta .tag--cat { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+    body.dark .reader-meta .tag--ai { background: #0047ab; color: #fff; border-color: #0047ab; }
+    body.dark .back-link { color: #e0e0e0; }
+    body.dark .back-link:hover { color: var(--color-accent); }
+
+    .dark-toggle { margin-left: auto; }
+    .raw-toggle { margin-left: var(--space-sm); }
+    #raw-content { display: none; margin-top: var(--space-lg); border-top: var(--border-thick); padding-top: var(--space-md); }
+    #raw-content pre { font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; background: var(--color-surface); border: 2px solid var(--color-border); padding: var(--space-sm); max-height: 500px; overflow-y: auto; }
+    body.dark #raw-content pre { background: #1e1e1e; border-color: #444; color: #ccc; }
   </style>
 </head>
 <body>
@@ -29,9 +45,15 @@
       <button class="btn btn--small btn--secondary" id="font-down">A-</button>
       <button class="btn btn--small btn--secondary" id="font-up">A+</button>
       <span id="reading-time" class="tag tag--cat">Reading time</span>
+      <button class="btn btn--small btn--secondary dark-toggle" id="dark-toggle">DARK</button>
+      <button class="btn btn--small btn--secondary raw-toggle" id="raw-toggle">SHOW RAW</button>
     </div>
     <div class="reader-content" id="reader-body">
       <p>Select a bookmark to read from the library view.</p>
+    </div>
+    <div id="raw-content">
+      <h3 style="font-size:14px;font-weight:800;text-transform:uppercase;margin-bottom:var(--space-sm)">RAW EXTRACTED CONTENT</h3>
+      <pre id="raw-text"></pre>
     </div>
   </article>
   <script type="module" src="reader.js"></script>

@@ -1,10 +1,11 @@
 import { retryWithBackoff } from '../core/utils/retry.js';
 
+const FETCH_TIMEOUT_MS = 60000;
+
 export class NimClient {
   constructor() {
     this.baseUrl = 'https://integrate.api.nvidia.com/v1';
-    this.model = 'step3.7-flash';
-    this.systemInstruction = 'You are a precise content analysis engine. Always return valid JSON only. Analyze the provided webpage content and generate:\n- 5-10 specific, relevant tags (not generic like "article" or "web")\n- A 1-2 sentence summary capturing key points\n- A single category from the allowed list\n- Estimated reading time in minutes\nNever include markdown formatting, explanations, or anything outside the JSON. If the content is empty or unreadable, return {"tags":[],"summary":"","category":"other","readingTime":0}.';
+    this.model = 'nvidia/nemotron-3-super-120b-a12b';
   }
 
   async getApiKey() {
@@ -17,24 +18,55 @@ export class NimClient {
     const apiKey = await this.getApiKey();
     const prompt = this.buildTaggingPrompt(text, title);
 
-    const response = await retryWithBackoff(() =>
-      fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: this.model,
-          messages: [
-            { role: 'system', content: this.systemInstruction },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.2,
-          max_tokens: 512,
-        }),
-      })
-    );
+    const { summaryLength } = await chrome.storage.local.get('summaryLength');
+    const summaryGuide = {
+      short: '1-2 sentences',
+      medium: 'a paragraph (3-5 sentences)',
+      long: 'a detailed multi-paragraph summary',
+    }[summaryLength || 'short'];
+
+    const instruction = `You are a precise content analysis engine. Return ONLY valid JSON.
+
+Analyze the webpage content and return this exact JSON structure:
+{
+  "tags": ["tag1", "tag2", ...],
+  "summary": "${summaryGuide}",
+  "category": "Technology|Design|Science|Business|Health|Education|Entertainment|News|Other",
+  "readingTime": <number>
+}
+
+Rules:
+- tags: 5-10 specific, relevant tags (NOT generic like "article" or "web")
+- summary: concise key points
+- category: choose ONE from the list above
+- readingTime: integer, estimated minutes
+- Return ONLY the JSON object. No markdown, no code fences, no other text.
+- If content is empty or unreadable: {"tags":[],"summary":"","category":"Other","readingTime":0}`;
+
+    const response = await retryWithBackoff(async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      try {
+        return await fetch(`${this.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: this.model,
+            messages: [
+              { role: 'user', content: `${instruction}\n\nTitle: ${title || ''}\n\nContent:\n${(text || '').slice(0, 8000)}` },
+            ],
+            temperature: 0.01,
+            max_tokens: summaryLength === 'long' ? 4096 : 2048,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+    });
 
     if (!response.ok) {
       const err = await response.text();
@@ -46,18 +78,40 @@ export class NimClient {
   }
 
   buildTaggingPrompt(text, title) {
-    const truncated = (text || '').slice(0, 12000);
-    return JSON.stringify({
-      task: 'analyze_content',
-      title: title || '',
-      content: truncated,
-    });
+    return '';
   }
 
   parseResponse(data) {
-    const text = data?.choices?.[0]?.message?.content || '{}';
-    const cleaned = text.replace(/```(json)?/g, '').trim();
-    return JSON.parse(cleaned);
+    const raw = data?.choices?.[0]?.message?.content;
+
+    if (!raw) {
+      const snippet = JSON.stringify(data).slice(0, 1000);
+      throw new Error(`AI returned empty response. Raw API response: ${snippet}`);
+    }
+
+    let cleaned = raw.trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      cleaned = jsonMatch[0];
+    }
+    cleaned = cleaned.replace(/```(json)?/gi, '').trim();
+
+    try {
+      const result = JSON.parse(cleaned);
+      const tags = Array.isArray(result.tags) ? result.tags : [];
+      const summary = typeof result.summary === 'string' ? result.summary : '';
+      const category = typeof result.category === 'string' ? result.category : 'Other';
+      const readingTime = typeof result.readingTime === 'number' ? result.readingTime : 0;
+
+      if (tags.length === 0 && !summary) {
+        throw new Error(`AI returned empty fields. Raw response: ${raw.slice(0, 500)}`);
+      }
+
+      return { tags, summary, category, readingTime };
+    } catch (e) {
+      if (e.message.startsWith('AI returned')) throw e;
+      throw new Error(`Failed to parse AI response: ${e.message}. Raw: ${raw.slice(0, 500)}`);
+    }
   }
 
   async setApiKey(key) {
