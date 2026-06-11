@@ -3,7 +3,7 @@ import { retryWithBackoff } from '../core/utils/retry.js';
 export class GeminiClient {
   constructor() {
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
-    this.model = 'gemini-2.5-flash';
+    this.model = 'gemini-2.0-flash';
     this.systemInstruction = 'You are a precise content analysis engine. Always return valid JSON only. Analyze the provided webpage content and generate:\n- 5-10 specific, relevant tags (not generic like "article" or "web")\n- A 1-2 sentence summary capturing key points\n- A single category from the allowed list\n- Estimated reading time in minutes\nNever include markdown formatting, explanations, or anything outside the JSON. If the content is empty or unreadable, return {"tags":[],"summary":"","category":"other","readingTime":0}.';
   }
 
