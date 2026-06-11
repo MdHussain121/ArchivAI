@@ -30,11 +30,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('nav-save').addEventListener('click', () => switchView('save'));
   document.getElementById('nav-list').addEventListener('click', () => switchView('list'));
   document.getElementById('nav-settings').addEventListener('click', openSettings);
+  document.getElementById('nav-export').addEventListener('click', handleExport);
   document.getElementById('save-btn').addEventListener('click', handleSave);
   document.getElementById('search-input').addEventListener('input', handleSearch);
   document.getElementById('filter-category').addEventListener('change', applyFilters);
   document.getElementById('filter-status').addEventListener('change', applyFilters);
   document.getElementById('sort-by').addEventListener('change', applyFilters);
+
+  window.addEventListener('online', () => { document.getElementById('offline-banner').style.display = 'none'; });
+  window.addEventListener('offline', () => { document.getElementById('offline-banner').style.display = 'block'; });
+  if (!navigator.onLine) { document.getElementById('offline-banner').style.display = 'block'; }
 
   switchView('save');
   loadPageData();
@@ -217,7 +222,7 @@ function renderBookmarkList(bookmarks) {
 
 function openReader(bookmark) {
   chrome.tabs.create({
-    url: bookmark.url,
+    url: chrome.runtime.getURL(`popup/reader.html?id=${bookmark.id}`),
   });
 }
 
@@ -227,6 +232,21 @@ function showStatus(message, type) {
   status.className = 'status-badge status-badge--' + type;
   status.style.display = 'block';
   setTimeout(() => { status.style.display = 'none'; }, 3000);
+}
+
+async function handleExport() {
+  const format = confirm('Export as JSON? Click Cancel for CSV') ? 'json' : 'csv';
+  const response = await sendMessageToSW({ action: ACTIONS.EXPORT_DATA, format });
+  if (response.ok) {
+    const blob = new Blob([response.data.data], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-curator-export.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus('Exported!', 'success');
+  }
 }
 
 function openSettings() {

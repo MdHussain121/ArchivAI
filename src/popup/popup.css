@@ -302,6 +302,18 @@ body {
   border-style: dashed;
 }
 
+.offline-banner {
+  background: var(--color-warning);
+  color: #000;
+  text-align: center;
+  padding: var(--space-xs) var(--space-md);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: var(--border-thick);
+}
+
 .empty-state__title {
   font-size: var(--font-size-lg);
   font-weight: 800;

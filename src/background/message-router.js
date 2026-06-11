@@ -9,12 +9,14 @@ export class MessageRouter {
     this.handlers = {
       [ACTIONS.GET_PAGE_META]: this.handleGetPageMeta.bind(this),
       [ACTIONS.SAVE_BOOKMARK]: this.handleSaveBookmark.bind(this),
+      [ACTIONS.GET_BOOKMARK]: this.handleGetBookmark.bind(this),
       [ACTIONS.GET_BOOKMARKS]: this.handleGetBookmarks.bind(this),
       [ACTIONS.SEARCH_BOOKMARKS]: this.handleSearchBookmarks.bind(this),
       [ACTIONS.GET_TAGS]: this.handleGetTags.bind(this),
       [ACTIONS.GET_CATEGORIES]: this.handleGetCategories.bind(this),
       [ACTIONS.GET_SETTINGS]: this.handleGetSettings.bind(this),
       [ACTIONS.UPDATE_SETTINGS]: this.handleUpdateSettings.bind(this),
+      [ACTIONS.EXPORT_DATA]: this.handleExportData.bind(this),
     };
   }
 
@@ -110,6 +112,10 @@ export class MessageRouter {
     return { id, isUpdate: false };
   }
 
+  async handleGetBookmark(msg) {
+    return db.bookmarks.get(msg.id);
+  }
+
   async handleGetBookmarks() {
     return db.bookmarks
       .orderBy('savedAt')
@@ -148,6 +154,52 @@ export class MessageRouter {
   async handleUpdateSettings(msg) {
     await chrome.storage.local.set(msg.settings);
     return true;
+  }
+
+  async handleExportData(msg) {
+    const format = msg.format || 'json';
+    const all = await db.bookmarks.orderBy('savedAt').toArray();
+
+    const exportData = all.map(b => ({
+      url: b.url,
+      title: b.title,
+      description: b.description,
+      domain: b.domain,
+      tags: (b.aiTags || []).concat(b.userTags || []),
+      category: b.suggestedCategory,
+      summary: b.aiSummary,
+      savedAt: new Date(b.savedAt).toISOString(),
+      readStatus: b.readStatus,
+      wordCount: b.wordCount,
+    }));
+
+    switch (format) {
+      case 'csv': {
+        const headers = ['url','title','description','domain','tags','category','summary','savedAt','readStatus','wordCount'];
+        const rows = exportData.map(b => [
+          `"${(b.url || '').replace(/"/g, '""')}"`,
+          `"${(b.title || '').replace(/"/g, '""')}"`,
+          `"${(b.description || '').replace(/"/g, '""')}"`,
+          `"${(b.domain || '').replace(/"/g, '""')}"`,
+          `"${(b.tags || []).join('; ')}"`,
+          `"${(b.category || '').replace(/"/g, '""')}"`,
+          `"${(b.summary || '').replace(/"/g, '""')}"`,
+          b.savedAt,
+          b.readStatus,
+          b.wordCount || 0,
+        ]);
+        return { format, data: '\uFEFF' + headers.join(',') + '\n' + rows.map(r => r.join(',')).join('\n') };
+      }
+      case 'html': {
+        const items = exportData.map(b =>
+          `<DT><A HREF="${b.url}" ADD_DATE="${Math.floor(new Date(b.savedAt).getTime() / 1000)}" TAGS="${(b.tags || []).join(',')}">${b.title}</A>`
+        ).join('\n');
+        return { format, data: `<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Bookmarks</TITLE>\n<H1>AI Content Curator Export</H1>\n<DL><p>\n${items}\n</DL>` };
+      }
+      default: {
+        return { format, data: JSON.stringify(exportData, null, 2) };
+      }
+    }
   }
 
   async handleContextMenu(info, tab) {

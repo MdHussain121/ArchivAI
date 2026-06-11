@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="popup.css" />
+  <style>
+    body { width: 100%; min-height: 100vh; padding: var(--space-lg); max-width: 800px; margin: 0 auto; }
+    .reader-header { margin-bottom: var(--space-lg); }
+    .reader-title { font-size: 28px; font-weight: 900; line-height: 1.2; margin-bottom: var(--space-sm); }
+    .reader-meta { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-lg); }
+    .reader-content { font-size: var(--reader-font-size, 16px); line-height: 1.8; color: #333; }
+    .reader-content p { margin-bottom: 1em; }
+    .reader-controls { display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg); align-items: center; }
+    .reader-controls label { font-weight: 700; font-size: var(--font-size-sm); text-transform: uppercase; }
+    .back-link { display: inline-block; margin-bottom: var(--space-md); font-weight: 700; text-decoration: underline; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="back-link" id="back-link">← BACK TO LIBRARY</div>
+  <article id="reader-content">
+    <div class="reader-header">
+      <h1 class="reader-title" id="reader-title">Loading...</h1>
+      <div class="reader-meta" id="reader-meta"></div>
+      <div class="strip"></div>
+    </div>
+    <div class="reader-controls">
+      <label>Font Size:</label>
+      <button class="btn btn--small btn--secondary" id="font-down">A-</button>
+      <button class="btn btn--small btn--secondary" id="font-up">A+</button>
+      <span id="reading-time" class="tag tag--cat">Reading time</span>
+    </div>
+    <div class="reader-content" id="reader-body">
+      <p>Select a bookmark to read from the library view.</p>
+    </div>
+  </article>
+  <script src="reader.js"></script>
+</body>
+</html>
