@@ -201,7 +201,19 @@ body {
 }
 
 .search-bar {
+  margin-bottom: var(--space-xs);
+}
+
+.filter-bar {
+  display: flex;
+  gap: var(--space-xs);
   margin-bottom: var(--space-sm);
+}
+
+.filter-bar .input--small {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-sm);
 }
 
 .footer {

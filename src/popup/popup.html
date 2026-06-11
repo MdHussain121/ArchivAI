@@ -43,6 +43,22 @@
         <div class="search-bar">
           <input type="text" class="input" id="search-input" placeholder="Search saved pages..." />
         </div>
+        <div class="filter-bar">
+          <select class="input input--small" id="filter-category">
+            <option value="">All Categories</option>
+          </select>
+          <select class="input input--small" id="filter-status">
+            <option value="">All Status</option>
+            <option value="unread">Unread</option>
+            <option value="read">Read</option>
+            <option value="archived">Archived</option>
+          </select>
+          <select class="input input--small" id="sort-by">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="title">Title A-Z</option>
+          </select>
+        </div>
         <div id="bookmark-list"></div>
       </div>
     </main>

@@ -4,9 +4,16 @@ import { ACTIONS } from '../core/messaging/protocol.js';
 let currentTab = null;
 let currentPageData = null;
 let port = null;
+let currentView = 'save';
+let bookmarksCache = [];
 
 function connectToSW() {
   port = chrome.runtime.connect({ name: 'popup-session' });
+  port.onMessage.addListener((msg) => {
+    if (msg.action === ACTIONS.AI_TAGS_READY) {
+      showSaveTags(msg.tags, msg.summary);
+    }
+  });
   port.onDisconnect.addListener(() => {
     if (!chrome.runtime.lastError) {
       setTimeout(connectToSW, 100);
@@ -20,23 +27,49 @@ document.addEventListener('DOMContentLoaded', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   currentTab = tab;
 
-  document.getElementById('nav-save').addEventListener('click', showSaveView);
-  document.getElementById('nav-list').addEventListener('click', showListView);
+  document.getElementById('nav-save').addEventListener('click', () => switchView('save'));
+  document.getElementById('nav-list').addEventListener('click', () => switchView('list'));
   document.getElementById('nav-settings').addEventListener('click', openSettings);
   document.getElementById('save-btn').addEventListener('click', handleSave);
   document.getElementById('search-input').addEventListener('input', handleSearch);
+  document.getElementById('filter-category').addEventListener('change', applyFilters);
+  document.getElementById('filter-status').addEventListener('change', applyFilters);
+  document.getElementById('sort-by').addEventListener('change', applyFilters);
 
-  showSaveView();
+  switchView('save');
   loadPageData();
+  loadBookmarks();
+  loadCategories();
 });
 
+async function loadCategories() {
+  const response = await sendMessageToSW({ action: ACTIONS.GET_CATEGORIES });
+  if (response.ok && response.data) {
+    const cats = new Set(response.data.map(c => c.name));
+    const select = document.getElementById('filter-category');
+    cats.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      select.appendChild(opt);
+    });
+  }
+}
+
+function switchView(view) {
+  currentView = view;
+  document.getElementById('save-view').style.display = view === 'save' ? 'flex' : 'none';
+  document.getElementById('list-view').style.display = view === 'list' ? 'flex' : 'none';
+  if (view === 'list') loadBookmarks();
+}
+
 async function loadPageData() {
-  const preview = document.getElementById('page-preview');
   const loading = document.getElementById('page-loading');
   const data = document.getElementById('page-data');
 
   loading.style.display = 'block';
   data.style.display = 'none';
+  document.getElementById('ai-card').style.display = 'none';
 
   try {
     const response = await sendMessageToSW({
@@ -55,8 +88,22 @@ async function loadPageData() {
       data.style.display = 'block';
     }
   } catch (err) {
-    loading.textContent = 'Could not load page data. Try navigating to a page first.';
+    loading.textContent = 'Navigate to a page first';
   }
+}
+
+function showSaveTags(tags, summary) {
+  const card = document.getElementById('ai-card');
+  const tagsContainer = document.getElementById('ai-tags');
+  const summaryEl = document.getElementById('ai-summary');
+
+  if (tags?.length) {
+    tagsContainer.innerHTML = tags.map(t => `<span class="tag tag--ai">${t}</span>`).join('');
+  }
+  if (summary) {
+    summaryEl.textContent = summary;
+  }
+  card.style.display = 'block';
 }
 
 async function handleSave() {
@@ -73,53 +120,62 @@ async function handleSave() {
     });
 
     if (response.ok) {
-      showStatus('Page saved! AI analysis in progress...', 'success');
+      showStatus('SAVED!', 'success');
+      setTimeout(() => switchView('list'), 1000);
     } else {
-      showStatus('Save failed: ' + response.error, 'error');
+      showStatus('FAILED: ' + response.error, 'error');
     }
   } catch (err) {
-    showStatus('Error: ' + err.message, 'error');
+    showStatus('ERROR: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = 'SAVE PAGE';
   }
 }
 
-async function handleSearch(e) {
-  const query = e.target.value.trim();
-  if (!query) return;
-
-  const response = await sendMessageToSW({
-    action: ACTIONS.SEARCH_BOOKMARKS,
-    query,
-  });
-
-  if (response.ok) {
-    renderBookmarkList(response.data);
-  }
-}
-
-function showStatus(message, type) {
-  const status = document.getElementById('save-status');
-  status.textContent = message;
-  status.className = 'status-badge status-badge--' + type;
-  status.style.display = 'block';
-  setTimeout(() => { status.style.display = 'none'; }, 3000);
-}
-
-function showSaveView() {
-  document.getElementById('save-view').style.display = 'flex';
-  document.getElementById('list-view').style.display = 'none';
-}
-
-async function showListView() {
-  document.getElementById('save-view').style.display = 'none';
-  document.getElementById('list-view').style.display = 'flex';
-
+async function loadBookmarks() {
   const response = await sendMessageToSW({ action: ACTIONS.GET_BOOKMARKS });
   if (response.ok) {
-    renderBookmarkList(response.data);
+    bookmarksCache = response.data;
+    applyFilters();
   }
+}
+
+function applyFilters() {
+  const search = (document.getElementById('search-input').value || '').toLowerCase();
+  const category = document.getElementById('filter-category').value;
+  const status = document.getElementById('filter-status').value;
+  const sort = document.getElementById('sort-by').value;
+
+  let filtered = [...bookmarksCache];
+
+  if (search) {
+    filtered = filtered.filter(b =>
+      b.title?.toLowerCase().includes(search) ||
+      (b.aiTags || []).some(t => t.toLowerCase().includes(search)) ||
+      b.url?.toLowerCase().includes(search)
+    );
+  }
+
+  if (category) {
+    filtered = filtered.filter(b => b.suggestedCategory === category);
+  }
+
+  if (status) {
+    filtered = filtered.filter(b => b.readStatus === status);
+  }
+
+  switch (sort) {
+    case 'title': filtered.sort((a, b) => (a.title || '').localeCompare(b.title || '')); break;
+    case 'oldest': filtered.sort((a, b) => a.savedAt - b.savedAt); break;
+    default: filtered.sort((a, b) => b.savedAt - a.savedAt); break;
+  }
+
+  renderBookmarkList(filtered);
+}
+
+async function handleSearch(e) {
+  applyFilters();
 }
 
 function renderBookmarkList(bookmarks) {
@@ -140,16 +196,45 @@ function renderBookmarkList(bookmarks) {
     const item = document.createElement('div');
     item.className = 'bookmark-item';
     item.innerHTML = `
-      <div class="bookmark-item__title">${b.title || 'Untitled'}</div>
-      <div class="bookmark-item__url">${b.domain || ''}</div>
-      <div class="bookmark-item__tags">
-        ${(b.aiTags || []).slice(0, 3).map(t => `<span class="tag tag--ai">${t}</span>`).join('')}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div class="bookmark-item__title">${escapeHtml(b.title || 'Untitled')}</div>
+          <div class="bookmark-item__url">${escapeHtml(b.domain || '')}</div>
+        </div>
+        <span class="tag ${b.readStatus === 'unread' ? 'tag--cat' : 'tag--ai'}" style="font-size:10px">
+          ${b.readStatus || 'unread'}
+        </span>
+      </div>
+      <div class="bookmark-item__tags" style="margin-top:6px">
+        ${b.suggestedCategory ? `<span class="tag tag--cat">${escapeHtml(b.suggestedCategory)}</span>` : ''}
+        ${(b.aiTags || []).slice(0, 3).map(t => `<span class="tag tag--ai">${escapeHtml(t)}</span>`).join('')}
       </div>
     `;
+    item.addEventListener('click', () => openReader(b));
     container.appendChild(item);
   });
 }
 
+function openReader(bookmark) {
+  chrome.tabs.create({
+    url: bookmark.url,
+  });
+}
+
+function showStatus(message, type) {
+  const status = document.getElementById('save-status');
+  status.textContent = message;
+  status.className = 'status-badge status-badge--' + type;
+  status.style.display = 'block';
+  setTimeout(() => { status.style.display = 'none'; }, 3000);
+}
+
 function openSettings() {
   chrome.runtime.openOptionsPage();
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
