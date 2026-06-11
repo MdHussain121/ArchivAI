@@ -260,16 +260,33 @@ function renderBookmarkList(bookmarks) {
           <div class="bookmark-item__title">${escapeHtml(b.title || 'Untitled')}</div>
           <div class="bookmark-item__url">${escapeHtml(b.domain || '')}</div>
         </div>
-        ${statusBadge}
+        <div style="display:flex;align-items:center;gap:4px">
+          ${statusBadge}
+          <button class="delete-btn" data-id="${b.id}" title="Delete">✕</button>
+        </div>
       </div>
       <div class="bookmark-item__tags" style="margin-top:6px">
         ${(b.aiTags || []).slice(0, 3).map(t => `<span class="tag tag--ai">${escapeHtml(t)}</span>`).join('')}
         ${!b.aiProcessed && b.aiTags?.length === 0 ? '<span style="font-size:11px;color:#999">Waiting for AI analysis...</span>' : ''}
       </div>
     `;
-    item.addEventListener('click', () => openReader(b));
+    item.querySelector('.bookmark-item__title').addEventListener('click', () => openReader(b));
+    item.querySelector('.delete-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleDelete(b);
+    });
     container.appendChild(item);
   });
+}
+
+async function handleDelete(bookmark) {
+  if (!confirm(`Delete "${bookmark.title || 'Untitled'}"?`)) return;
+
+  const response = await sendMessageToSW({ action: ACTIONS.DELETE_BOOKMARK, id: bookmark.id });
+  if (response.ok) {
+    bookmarksCache = bookmarksCache.filter(b => b.id !== bookmark.id);
+    applyFilters();
+  }
 }
 
 function openReader(bookmark) {

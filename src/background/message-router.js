@@ -9,6 +9,7 @@ export class MessageRouter {
     this.handlers = {
       [ACTIONS.GET_PAGE_META]: this.handleGetPageMeta.bind(this),
       [ACTIONS.SAVE_BOOKMARK]: this.handleSaveBookmark.bind(this),
+      [ACTIONS.DELETE_BOOKMARK]: this.handleDeleteBookmark.bind(this),
       [ACTIONS.GET_BOOKMARK]: this.handleGetBookmark.bind(this),
       [ACTIONS.GET_BOOKMARKS]: this.handleGetBookmarks.bind(this),
       [ACTIONS.SEARCH_BOOKMARKS]: this.handleSearchBookmarks.bind(this),
@@ -110,6 +111,14 @@ export class MessageRouter {
 
     this.broadcastToPopups({ action: ACTIONS.BOOKMARK_UPDATED });
     return { id, isUpdate: false };
+  }
+
+  async handleDeleteBookmark(msg) {
+    const { db } = await import('../lib/dexie-bundle.js');
+    await db.bookmarks.delete(msg.id);
+    await db.syncQueue.where('bookmarkId').equals(msg.id).delete();
+    this.broadcastToPopups({ action: ACTIONS.BOOKMARK_UPDATED });
+    return true;
   }
 
   async handleGetBookmark(msg) {
