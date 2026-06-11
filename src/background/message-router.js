@@ -114,7 +114,6 @@ export class MessageRouter {
   }
 
   async handleDeleteBookmark(msg) {
-    const { db } = await import('../lib/dexie-bundle.js');
     await db.bookmarks.delete(msg.id);
     await db.syncQueue.where('bookmarkId').equals(msg.id).delete();
     this.broadcastToPopups({ action: ACTIONS.BOOKMARK_UPDATED });

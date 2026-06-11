@@ -280,13 +280,22 @@ function renderBookmarkList(bookmarks) {
 }
 
 async function handleDelete(bookmark) {
-  if (!confirm(`Delete "${bookmark.title || 'Untitled'}"?`)) return;
+  const confirmEl = document.getElementById('delete-confirm');
+  const msg = document.getElementById('delete-msg');
+  msg.textContent = `"${bookmark.title || 'Untitled'}"`;
+  confirmEl.style.display = 'flex';
 
-  const response = await sendMessageToSW({ action: ACTIONS.DELETE_BOOKMARK, id: bookmark.id });
-  if (response.ok) {
-    bookmarksCache = bookmarksCache.filter(b => b.id !== bookmark.id);
-    applyFilters();
-  }
+  document.getElementById('delete-yes').onclick = async () => {
+    confirmEl.style.display = 'none';
+    const response = await sendMessageToSW({ action: ACTIONS.DELETE_BOOKMARK, id: bookmark.id });
+    if (response.ok) {
+      bookmarksCache = bookmarksCache.filter(b => b.id !== bookmark.id);
+      applyFilters();
+    }
+  };
+  document.getElementById('delete-no').onclick = () => {
+    confirmEl.style.display = 'none';
+  };
 }
 
 function openReader(bookmark) {

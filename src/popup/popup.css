@@ -389,3 +389,45 @@ body {
   font-weight: 800;
   margin-bottom: var(--space-sm);
 }
+
+.delete-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.delete-dialog {
+  background: #fff;
+  border: var(--border-thicker);
+  box-shadow: var(--shadow-brutal-lg);
+  padding: var(--space-lg);
+  width: 280px;
+  text-align: center;
+}
+
+.delete-dialog__title {
+  font-size: var(--font-size-lg);
+  font-weight: 900;
+  text-transform: uppercase;
+  margin-bottom: var(--space-sm);
+}
+
+.delete-dialog__msg {
+  font-size: var(--font-size-base);
+  margin-bottom: var(--space-lg);
+  word-break: break-word;
+}
+
+.delete-dialog__actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.delete-dialog__actions .btn {
+  flex: 1;
+  width: auto;
+}
