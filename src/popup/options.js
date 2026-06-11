@@ -4,9 +4,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const testBtn = document.getElementById('test-key-btn');
   const status = document.getElementById('key-status');
 
-  const result = await chrome.storage.local.get('geminiApiKey');
-  if (result.geminiApiKey) {
-    keyInput.value = result.geminiApiKey;
+  const result = await chrome.storage.local.get('nimApiKey');
+  if (result.nimApiKey) {
+    keyInput.value = result.nimApiKey;
   }
 
   saveBtn.addEventListener('click', async () => {
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    await chrome.storage.local.set({ geminiApiKey: key });
+    await chrome.storage.local.set({ nimApiKey: key });
     await chrome.runtime.sendMessage({ action: 'apiKeyUpdated' });
     showStatus('API key saved!', 'success');
   });
@@ -32,9 +32,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     testBtn.disabled = true;
 
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`
-      );
+      const res = await fetch('https://integrate.api.nvidia.com/v1/models', {
+        headers: { 'Authorization': `Bearer ${key}` },
+      });
       if (res.ok) {
         showStatus('API key is valid!', 'success');
       } else {

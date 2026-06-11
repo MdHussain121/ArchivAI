@@ -1,7 +1,7 @@
 import { ACTIONS, success, error } from '../core/messaging/protocol.js';
 import { db } from '../lib/dexie-bundle.js';
 import { getDomain, normalizeUrl } from '../core/utils/url-utils.js';
-import { GeminiClient } from './gemini-client.js';
+import { NimClient } from './nim-client.js';
 
 export class MessageRouter {
   constructor() {
@@ -217,17 +217,17 @@ export class MessageRouter {
   }
 
   async processAITags(bookmarkId, textContent, title) {
-    const { geminiApiKey } = await chrome.storage.local.get('geminiApiKey');
+    const { nimApiKey } = await chrome.storage.local.get('nimApiKey');
 
-    if (!geminiApiKey) {
+    if (!nimApiKey) {
       await db.bookmarks.update(bookmarkId, { aiProcessed: true, syncStatus: 'no_key' });
       this.broadcastToPopups({ action: ACTIONS.AI_TAGS_READY, bookmarkId, tags: [], summary: '', skipped: true });
       return;
     }
 
     try {
-      const gemini = new GeminiClient();
-      const result = await gemini.analyze(textContent, title);
+      const nim = new NimClient();
+      const result = await nim.analyze(textContent, title);
 
       await db.bookmarks.update(bookmarkId, {
         aiTags: result.tags || [],

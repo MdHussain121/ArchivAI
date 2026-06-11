@@ -53,7 +53,7 @@
 - REQ-32: Estimated reading time display
 
 ### REQ-SETTINGS: Settings & API Key
-- REQ-33: Options page with Gemini API key input (password field)
+- REQ-33: Options page with Nvidia NIM API key input (password field)
 - REQ-34: "Test API Key" button to validate key
 - REQ-35: API key stored securely in chrome.storage.local
 - REQ-36: Usage quota display (requests made today)

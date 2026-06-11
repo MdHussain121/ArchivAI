@@ -52,6 +52,6 @@ src/
 
 ## Setup After Loading
 1. Click extension icon → Settings (⚙)
-2. Get a Gemini API key from aistudio.google.com
+2. Get a Nvidia NIM API key from build.nvidia.com
 3. Paste key and click "Test Key"
 4. Start saving pages!

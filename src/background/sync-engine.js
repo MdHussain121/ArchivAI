@@ -1,10 +1,10 @@
-import { GeminiClient } from './gemini-client.js';
+import { NimClient } from './nim-client.js';
 import { db } from '../lib/dexie-bundle.js';
 
 export class SyncEngine {
   constructor() {
     this.processing = false;
-    this.gemini = new GeminiClient();
+    this.nim = new NimClient();
   }
 
   async processQueue() {
@@ -42,13 +42,13 @@ export class SyncEngine {
   async processItem(item) {
     switch (item.action) {
       case 'process_ai': {
-        const { geminiApiKey } = await chrome.storage.local.get('geminiApiKey');
-        if (!geminiApiKey) {
+        const { nimApiKey } = await chrome.storage.local.get('nimApiKey');
+        if (!nimApiKey) {
           console.log('Sync: AI skipped — no API key');
           return;
         }
 
-        const result = await this.gemini.analyze(
+        const result = await this.nim.analyze(
           item.payload?.textContent,
           item.payload?.title
         );

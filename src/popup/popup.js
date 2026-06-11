@@ -60,9 +60,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function checkApiKey() {
-  const result = await chrome.storage.local.get('geminiApiKey');
+  const result = await chrome.storage.local.get('nimApiKey');
   const banner = document.getElementById('no-key-banner');
-  if (!result.geminiApiKey) {
+  if (!result.nimApiKey) {
     banner.style.display = 'block';
   } else {
     banner.style.display = 'none';
@@ -129,7 +129,7 @@ function showSaveTags(tags, summary, skipped, error) {
   if (skipped) {
     card.innerHTML = `
       <h2 class="card__title">⚠ AI UNAVAILABLE</h2>
-      <p class="card__body">Add a Gemini API key in Settings to enable auto-tagging.</p>
+      <p class="card__body">Add a Nvidia NIM API key in Settings to enable auto-tagging.</p>
     `;
     card.style.display = 'block';
     return;
@@ -167,7 +167,7 @@ async function handleSave() {
     });
 
     if (response.ok) {
-      showStatus('SAVED! Analyzing with Gemini AI...', 'success');
+      showStatus('SAVED! Analyzing with Nvidia NIM...', 'success');
       document.getElementById('ai-pending').style.display = 'flex';
     } else {
       showStatus('FAILED: ' + response.error, 'error');

@@ -23,7 +23,7 @@ One-click save any webpage → Gemini automatically categorizes, tags, and summa
 ## Tech Stack
 
 - Chrome Extension Manifest V3
-- Google Gemini API (gemini-2.0-flash for speed/cost balance)
+- Nvidia NIM API (step3.7-flash model)
 - Vanilla JS/HTML/CSS (no framework overhead for an extension)
 - IndexedDB (via Dexie.js wrapper) for local storage
 - Neo-brutalism CSS design system
@@ -31,6 +31,6 @@ One-click save any webpage → Gemini automatically categorizes, tags, and summa
 ## Constraints
 
 - Must work offline for viewing saved content
-- Gemini API key required (user-provided)
+- Nvidia NIM API key required (user-provided)
 - Chrome extension store compliant
 - Lightweight - minimal impact on browser performance

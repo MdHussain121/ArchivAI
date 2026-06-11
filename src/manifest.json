@@ -11,7 +11,7 @@
     "contextMenus"
   ],
   "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
+    "https://integrate.api.nvidia.com/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js",
