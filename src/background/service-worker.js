@@ -36,6 +36,12 @@ async function ensureInitialized() {
 chrome.runtime.onInstalled.addListener(async (details) => {
   await ensureInitialized();
 
+  chrome.contextMenus.create({
+    id: 'save-page',
+    title: 'Save to AI Curator',
+    contexts: ['page', 'link'],
+  });
+
   if (details.reason === 'install') {
     chrome.alarms.create('cleanup-old', { periodInMinutes: 60 });
   }
@@ -62,10 +68,4 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   ensureInitialized().then(() => router.handleContextMenu(info, tab));
-});
-
-chrome.contextMenus.create({
-  id: 'save-page',
-  title: 'Save to AI Curator',
-  contexts: ['page', 'link'],
 });

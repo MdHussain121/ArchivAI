@@ -3,3 +3,5 @@ package-lock.json
 *.crx
 *.pem
 .planning/
+src/lib/dexie-bundle.js
+archivai-fix/

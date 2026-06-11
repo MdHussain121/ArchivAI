@@ -16,7 +16,6 @@ export class NimClient {
 
   async analyze(text, title) {
     const apiKey = await this.getApiKey();
-    const prompt = this.buildTaggingPrompt(text, title);
 
     const { summaryLength } = await chrome.storage.local.get('summaryLength');
     const summaryGuide = {
@@ -77,10 +76,6 @@ Rules:
     return this.parseResponse(data);
   }
 
-  buildTaggingPrompt(text, title) {
-    return '';
-  }
-
   parseResponse(data) {
     const raw = data?.choices?.[0]?.message?.content;
 
@@ -114,20 +109,4 @@ Rules:
     }
   }
 
-  async setApiKey(key) {
-    if (!key) throw new Error('API key is required');
-    await chrome.storage.local.set({ nimApiKey: key });
-  }
-
-  async validateApiKey() {
-    try {
-      const apiKey = await this.getApiKey();
-      const res = await fetch(`${this.baseUrl}/models`, {
-        headers: { 'Authorization': `Bearer ${apiKey}` },
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
-  }
 }

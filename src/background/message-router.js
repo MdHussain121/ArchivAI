@@ -226,16 +226,40 @@ export class MessageRouter {
 
   async handleContextMenu(info, tab) {
     const url = info.linkUrl || info.pageUrl;
-    if (!url) return;
+    if (!url || !tab?.id) return;
 
-    const pageData = {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content/content.js'],
+      });
+    } catch (e) {
+      // Content script may already be injected
+    }
+
+    const pageData = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Page extraction timed out')), 10000);
+
+      chrome.tabs.sendMessage(tab.id, { action: ACTIONS.EXTRACT_PAGE }, (response) => {
+        clearTimeout(timeout);
+        if (chrome.runtime.lastError) {
+          resolve(null);
+        } else if (response?.ok) {
+          resolve(response.data);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+
+    const safePageData = pageData || {
       url,
       title: info.selectionText || tab?.title || 'Untitled',
       description: '',
       domain: getDomain(url),
     };
 
-    await this.handleSaveBookmark({ pageData });
+    await this.handleSaveBookmark({ pageData: safePageData });
   }
 
   async processAITags(bookmarkId, textContent, title) {
