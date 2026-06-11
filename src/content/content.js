@@ -1,9 +1,12 @@
-import { ACTIONS, success, error } from '../core/messaging/protocol.js';
+const ACTIONS = {
+  EXTRACT_PAGE: 'EXTRACT_PAGE',
+  GET_PAGE_META: 'GET_PAGE_META',
+};
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === ACTIONS.EXTRACT_PAGE) {
     const pageData = extractPageData();
-    sendResponse(success(pageData));
+    sendResponse({ ok: true, data: pageData });
   }
 });
 
@@ -48,20 +51,17 @@ function getFavicon() {
 
 function extractMainText() {
   const article = document.querySelector('article');
-  if (article) return article.textContent;
+  if (article) return article.textContent.slice(0, 100000);
 
   const main = document.querySelector('main');
-  if (main) return main.textContent;
+  if (main) return main.textContent.slice(0, 100000);
 
   const body = document.body;
   if (!body) return '';
 
   const cloned = body.cloneNode(true);
-  removeElements(cloned, 'script, style, nav, footer, header, aside, iframe, .sidebar, .ad, .advertisement, [role="complementary"]');
+  const selectors = 'script, style, nav, footer, header, aside, iframe, ' +
+    '.sidebar, .ad, .advertisement, [role="complementary"]';
+  cloned.querySelectorAll(selectors).forEach(el => el.remove());
   return cloned.textContent.replace(/\s+/g, ' ').trim().slice(0, 100000);
-}
-
-function removeElements(parent, selector) {
-  const elements = parent.querySelectorAll(selector);
-  elements.forEach(el => el.remove());
 }

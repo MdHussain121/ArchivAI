@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AI Content Curator",
   "version": "1.0.0",
-  "description": "Save web pages and auto-organize with Gemini AI. Tags, categorizes, and summarizes content intelligently.",
+  "description": "Save web pages and auto-organize with Gemini AI. Automatically tags, categorizes, and summarizes content.",
   "permissions": [
     "storage",
     "activeTab",
