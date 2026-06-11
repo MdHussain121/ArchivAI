@@ -218,8 +218,10 @@ export class MessageRouter {
 
   async processAITags(bookmarkId, textContent, title) {
     const { geminiApiKey } = await chrome.storage.local.get('geminiApiKey');
+
     if (!geminiApiKey) {
-      console.log('AI skipped: no Gemini API key configured');
+      await db.bookmarks.update(bookmarkId, { aiProcessed: true, syncStatus: 'no_key' });
+      this.broadcastToPopups({ action: ACTIONS.AI_TAGS_READY, bookmarkId, tags: [], summary: '', skipped: true });
       return;
     }
 
@@ -244,14 +246,8 @@ export class MessageRouter {
       });
     } catch (err) {
       console.warn('AI processing failed:', err.message);
-      const { db } = await import('../lib/dexie-bundle.js');
-      await db.syncQueue.add({
-        bookmarkId,
-        action: 'process_ai',
-        payload: { textContent, title },
-        retryCount: 0,
-        createdAt: Date.now(),
-      });
+      await db.bookmarks.update(bookmarkId, { aiProcessed: true, syncStatus: 'failed' });
+      this.broadcastToPopups({ action: ACTIONS.AI_TAGS_READY, bookmarkId, tags: [], summary: '', error: err.message });
     }
   }
 

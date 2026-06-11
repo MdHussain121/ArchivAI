@@ -11,10 +11,18 @@ function connectToSW() {
   port = chrome.runtime.connect({ name: 'popup-session' });
   port.onMessage.addListener((msg) => {
     if (msg.action === ACTIONS.AI_TAGS_READY) {
-      showSaveTags(msg.tags, msg.summary);
+      showSaveTags(msg.tags, msg.summary, msg.skipped, msg.error);
       loadBookmarks();
     }
   });
+
+  // Timeout — if AI doesn't respond in 12s, hide spinner
+  setTimeout(() => {
+    const pending = document.getElementById('ai-pending');
+    if (pending && pending.style.display !== 'none') {
+      pending.style.display = 'none';
+    }
+  }, 12000);
   port.onDisconnect.addListener(() => {
     if (!chrome.runtime.lastError) {
       setTimeout(connectToSW, 100);
@@ -112,11 +120,29 @@ async function loadPageData() {
   }
 }
 
-function showSaveTags(tags, summary) {
+function showSaveTags(tags, summary, skipped, error) {
   document.getElementById('ai-pending').style.display = 'none';
   const card = document.getElementById('ai-card');
   const tagsContainer = document.getElementById('ai-tags');
   const summaryEl = document.getElementById('ai-summary');
+
+  if (skipped) {
+    card.innerHTML = `
+      <h2 class="card__title">⚠ AI UNAVAILABLE</h2>
+      <p class="card__body">Add a Gemini API key in Settings to enable auto-tagging.</p>
+    `;
+    card.style.display = 'block';
+    return;
+  }
+
+  if (error) {
+    card.innerHTML = `
+      <h2 class="card__title">⚠ AI FAILED</h2>
+      <p class="card__body">${escapeHtml(error)}. It will retry automatically.</p>
+    `;
+    card.style.display = 'block';
+    return;
+  }
 
   if (tags?.length) {
     tagsContainer.innerHTML = tags.map(t => `<span class="tag tag--ai">${escapeHtml(t)}</span>`).join('');
@@ -217,9 +243,16 @@ function renderBookmarkList(bookmarks) {
     const item = document.createElement('div');
     item.className = 'bookmark-item';
 
-    const statusBadge = !b.aiProcessed
-      ? '<span class="tag" style="background:#ffaa00;color:#000;font-size:10px">AI PENDING</span>'
-      : `<span class="tag tag--cat" style="font-size:10px">${escapeHtml(b.suggestedCategory || 'uncategorized')}</span>`;
+    let statusBadge;
+    if (!b.aiProcessed) {
+      statusBadge = '<span class="tag" style="background:#ffaa00;color:#000;font-size:10px">AI PENDING</span>';
+    } else if (b.syncStatus === 'no_key') {
+      statusBadge = '<span class="tag" style="background:#999;color:#fff;font-size:10px">NO AI KEY</span>';
+    } else if (b.syncStatus === 'failed') {
+      statusBadge = '<span class="tag" style="background:#ff0000;color:#fff;font-size:10px">AI FAILED</span>';
+    } else {
+      statusBadge = `<span class="tag tag--cat" style="font-size:10px">${escapeHtml(b.suggestedCategory || 'uncategorized')}</span>`;
+    }
 
     item.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
