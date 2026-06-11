@@ -4,4 +4,3 @@ package-lock.json
 *.pem
 .planning/
 src/lib/dexie-bundle.js
-archivai-fix/
