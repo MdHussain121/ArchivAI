@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "esbuild src/core/db/schema.js --bundle --outfile=src/lib/dexie-bundle.js --format=esm --external:chrome",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

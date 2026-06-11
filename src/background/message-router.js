@@ -1,6 +1,7 @@
 import { ACTIONS, success, error } from '../core/messaging/protocol.js';
 import { db } from '../lib/dexie-bundle.js';
 import { getDomain, normalizeUrl } from '../core/utils/url-utils.js';
+import { GeminiClient } from './gemini-client.js';
 
 export class MessageRouter {
   constructor() {
@@ -103,6 +104,8 @@ export class MessageRouter {
     bookmark.savedAt = Date.now();
     const id = await db.bookmarks.add(bookmark);
 
+    this.processAITags(id, bookmark.textContent, bookmark.title).catch(() => {});
+
     this.broadcastToPopups({ action: ACTIONS.BOOKMARK_UPDATED });
     return { id, isUpdate: false };
   }
@@ -159,6 +162,39 @@ export class MessageRouter {
     };
 
     await this.handleSaveBookmark({ pageData });
+  }
+
+  async processAITags(bookmarkId, textContent, title) {
+    try {
+      const gemini = new GeminiClient();
+      const result = await gemini.analyze(textContent, title);
+
+      await db.bookmarks.update(bookmarkId, {
+        aiTags: result.tags || [],
+        aiSummary: result.summary || '',
+        suggestedCategory: result.category || '',
+        aiProcessed: true,
+        aiProcessedAt: Date.now(),
+        syncStatus: 'synced',
+      });
+
+      this.broadcastToPopups({
+        action: ACTIONS.AI_TAGS_READY,
+        bookmarkId,
+        tags: result.tags,
+        summary: result.summary,
+      });
+    } catch (err) {
+      console.warn('AI processing failed:', err.message);
+      const { db } = await import('../lib/dexie-bundle.js');
+      await db.syncQueue.add({
+        bookmarkId,
+        action: 'process_ai',
+        payload: { textContent, title },
+        retryCount: 0,
+        createdAt: Date.now(),
+      });
+    }
   }
 
   broadcastToPopups(msg) {

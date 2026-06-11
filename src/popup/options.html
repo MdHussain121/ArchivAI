@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="popup.css" />
+  <style>
+    body { width: 500px; min-height: 400px; padding: var(--space-md); }
+    .options { display: flex; flex-direction: column; gap: var(--space-lg); }
+    .form-group { display: flex; flex-direction: column; gap: var(--space-sm); }
+    .form-group label { font-weight: 700; text-transform: uppercase; font-size: var(--font-size-sm); }
+    .btn-row { display: flex; gap: var(--space-sm); }
+    .btn-row .btn { width: auto; flex: 1; }
+    .status { margin-top: var(--space-sm); }
+    .info-card { background: var(--color-surface); border: 2px solid var(--color-border); padding: var(--space-sm); font-size: var(--font-size-sm); }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <h1 class="header__title">SETTINGS</h1>
+      <div class="strip"></div>
+    </header>
+
+    <main style="padding: var(--space-md);">
+      <div class="options">
+        <div class="card">
+          <h2 class="card__title">GEMINI API KEY</h2>
+          <div class="info-card">
+            Get your free API key from <strong>aistudio.google.com</strong>
+          </div>
+          <div class="form-group" style="margin-top: var(--space-md);">
+            <label for="api-key">API Key</label>
+            <input type="password" id="api-key" class="input" placeholder="Paste your Gemini API key" />
+          </div>
+          <div class="btn-row" style="margin-top: var(--space-md);">
+            <button class="btn btn--primary" id="save-key-btn">SAVE KEY</button>
+            <button class="btn btn--secondary" id="test-key-btn">TEST KEY</button>
+          </div>
+          <div id="key-status" class="status" style="display:none"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="card__title">ABOUT</h2>
+          <p class="card__body">
+            AI Content Curator v1.0.0<br/>
+            Save web pages and auto-organize with Gemini AI.
+          </p>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
