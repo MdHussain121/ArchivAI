@@ -3,7 +3,8 @@ import { retryWithBackoff } from '../core/utils/retry.js';
 export class GeminiClient {
   constructor() {
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
-    this.model = 'gemini-2.0-flash';
+    this.model = 'gemini-2.5-flash';
+    this.systemInstruction = 'You are a precise content analysis engine. Always return valid JSON only. Analyze the provided webpage content and generate:\n- 5-10 specific, relevant tags (not generic like "article" or "web")\n- A 1-2 sentence summary capturing key points\n- A single category from the allowed list\n- Estimated reading time in minutes\nNever include markdown formatting, explanations, or anything outside the JSON. If the content is empty or unreadable, return {"tags":[],"summary":"","category":"other","readingTime":0}.';
   }
 
   async getApiKey() {
@@ -21,12 +22,13 @@ export class GeminiClient {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          system_instruction: { parts: [{ text: this.systemInstruction }] },
           contents: [{
             parts: [{ text: prompt }]
           }],
           generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 256,
+            temperature: 0.2,
+            maxOutputTokens: 512,
             responseMimeType: 'application/json',
           }
         }),
@@ -43,20 +45,12 @@ export class GeminiClient {
   }
 
   buildTaggingPrompt(text, title) {
-    const truncated = (text || '').slice(0, 8000);
-    return `You are a content analysis engine. Analyze the following article and return ONLY valid JSON.
-
-Title: ${title || ''}
-
-Content: ${truncated}
-
-Return JSON with this exact structure:
-{
-  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
-  "summary": "One sentence summary (max 30 words)",
-  "category": "one of: technology, science, design, business, health, education, entertainment, lifestyle, news, other",
-  "readingTime": estimated minutes as number
-}`;
+    const truncated = (text || '').slice(0, 12000);
+    return JSON.stringify({
+      task: 'analyze_content',
+      title: title || '',
+      content: truncated,
+    });
   }
 
   parseTaggingResponse(data) {
