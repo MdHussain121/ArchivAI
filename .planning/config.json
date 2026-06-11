@@ -1,7 +1,0 @@
-{
-  "mode": "yolo",
-  "depth": "comprehensive",
-  "parallelization": true,
-  "project": "AI Content Curator",
-  "type": "chrome-extension"
-}
