@@ -1,6 +1,6 @@
 # ArchivAI
 
-Save web pages and auto-organize them with Nvidia NIM AI. Smart tagging, categorization, and summarization — all local-first.
+Save web pages and auto-organize them with Nvidia NIM AI. Smart tagging, categorization, and summarization.
 
 ## Features
 
